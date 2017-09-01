@@ -126,24 +126,26 @@ class ParticleQuadTreeNode(object):
             for leaf in child.leaves:
                 yield leaf
 
-    def plot(self, fig=None, axes=None):
-        """Plot this quadtree node and its subtree"""
-        if fig is None and axes is None:
-            fig = plt.figure(figsize=(4, 4))
-            axes = fig.add_axes([.01, .01, .98, .98])
-            axes.set_aspect('equal')
-            plt.axis('off')
-            plt.xlim((0, 1))
-            plt.ylim((0, 1))
 
+    def _plot_subtree(self, fig, axes):
         patch = Rectangle(self.left_edge, self.half_width*2, self.half_width*2,
                           fill=False)
         axes.add_patch(patch)
 
         if self.positions is not None:
             positions = self.positions[:self.num_particles]
-            axes.scatter(positions[:, 0], positions[:, 1], 1, color='k')
+            axes.scatter(positions[:, 0], positions[:, 1], .1, color='k')
 
         for child in self.children:
-            child.plot(fig, axes)
+            child._plot_subtree(fig, axes)
+
+    def plot(self, fig=None, axes=None):
+        """Plot this quadtree node and its subtree"""
+        fig = plt.figure(figsize=(4, 4))
+        axes = fig.add_axes([.01, .01, .98, .98])
+        axes.set_aspect('equal')
+        plt.axis('off')
+        plt.xlim((0, 1))
+        plt.ylim((0, 1))
+        self._plot_subtree(fig, axes)
         plt.show()
