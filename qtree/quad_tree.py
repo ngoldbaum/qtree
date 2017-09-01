@@ -136,15 +136,4 @@ class ParticleQuadTreeNode(object):
             if child is None:
                 continue
             child.plot(fig, axes)
-
-
-if __name__ == "__main__":
-    np.random.seed(0x4d3d3d3)
-    positions = np.random.normal(loc=0.5, scale=0.1, size=(1000, 2))
-    positions = np.clip(positions, 0, 1.0)
-
-    tree = ParticleQuadTreeNode([0.5, 0.5], 0.5)
-
-    tree.insert(positions)
-    tree.plot()
-    plt.show()
+        plt.show()
