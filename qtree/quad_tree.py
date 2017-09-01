@@ -24,8 +24,9 @@ _offsets = {
 
 
 class ParticleQuadTreeNode(object):
-    _left_edge = None
-    _right_edge = None
+    __slots__ = ('positions', 'num_particles', 'center', 'half_width',
+                 'northeast', 'northwest', 'southeast', 'southwest',
+                 '_left_edge', '_right_edge')
 
     def __init__(self, center, half_width):
         """A QuadTree data structure containing particles
@@ -56,6 +57,8 @@ class ParticleQuadTreeNode(object):
         self.northwest = None
         self.southeast = None
         self.southwest = None
+        self._left_edge = None
+        self._right_edge = None
 
     def insert(self, positions):
         """Insert particle into the quadtree
