@@ -24,6 +24,8 @@ _offsets = {
 
 
 class ParticleQuadTreeNode(object):
+    _left_edge = None
+    _right_edge = None
 
     def __init__(self, center, half_width):
         """A QuadTree data structure containing particles
@@ -47,8 +49,6 @@ class ParticleQuadTreeNode(object):
                 "Received center with shape %s but expected (2,)"
                 % (center.shape,))
 
-        self.left_edge = center - half_width
-        self.right_edge = center + half_width
         self.center = center
         self.half_width = half_width
 
@@ -126,6 +126,17 @@ class ParticleQuadTreeNode(object):
             for leaf in child.leaves:
                 yield leaf
 
+    @property
+    def left_edge(self):
+        if self._left_edge is None:
+            self._left_edge = self.center - self.half_width
+        return self._left_edge
+
+    @property
+    def right_edge(self):
+        if self._right_edge is None:
+            self._right_edge = self.center + self.half_width
+        return self._right_edge
 
     def _plot_subtree(self, fig, axes):
         patch = Rectangle(self.left_edge, self.half_width*2, self.half_width*2,
