@@ -83,14 +83,16 @@ class ParticleQuadTreeNode(object):
                 "positions outside node with left_edge=%s and right_edge=%s"
                 % (self.left_edge, self.right_edge))
 
+        cur_np = self.num_particles
         self.num_particles += nparticles
 
         if self.num_particles <= _NODE_CAPACITY:
-            cur_np = self.num_particles - nparticles
             self.positions[cur_np: cur_np + nparticles] = positions
             return
 
-        self.positions = None
+        if self.positions is not None:
+            positions = np.vstack((self.positions[:cur_np], positions))
+            self.positions = None
 
         # adding another particle requires refining the tree
         center = self.center
