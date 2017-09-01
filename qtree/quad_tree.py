@@ -90,26 +90,26 @@ class ParticleQuadTreeNode(object):
             self.positions[cur_np: cur_np + nparticles] = positions
             return
 
-        if self.positions is not None:
+        if self.is_leaf:
             positions = np.vstack((self.positions[:cur_np], positions))
             self.positions = None
 
         # adding another particle requires refining the tree
         center = self.center
-        for position in positions:
-            pos_gt_cen = tuple((position > center).astype(int))
-            self._insert_child(pos_gt_cen, position)
+        for direction in _Direction:
+            pos_gt_cen = (positions > center).astype(int)
+            inds = (pos_gt_cen == direction.value).all(axis=-1).nonzero()[0]
+            self._insert_child(direction, positions[inds])
 
-    def _insert_child(self, direction, position):
-        child = _Direction(direction)
-        child_name = child.name.lower()
+    def _insert_child(self, direction, positions):
+        child_name = direction.name.lower()
         child_node = getattr(self, child_name)
         if child_node is None:
-            offset = _offsets[child]
+            offset = _offsets[direction]
             child_node = ParticleQuadTreeNode(
                 self.center + self.half_width / 2 * offset, self.half_width/2)
             setattr(self, child_name, child_node)
-        child_node.insert(position)
+        child_node.insert(positions)
 
     @property
     def children(self):
@@ -120,7 +120,7 @@ class ParticleQuadTreeNode(object):
 
     @property
     def leaves(self):
-        if self.positions is not None:
+        if self.is_leaf:
             yield self
         for child in self.children:
             for leaf in child.leaves:
@@ -138,12 +138,16 @@ class ParticleQuadTreeNode(object):
             self._right_edge = self.center + self.half_width
         return self._right_edge
 
+    @property
+    def is_leaf(self):
+        return self.positions is not None
+
     def _plot_subtree(self, fig, axes):
         patch = Rectangle(self.left_edge, self.half_width*2, self.half_width*2,
                           fill=False)
         axes.add_patch(patch)
 
-        if self.positions is not None:
+        if self.is_leaf:
             positions = self.positions[:self.num_particles]
             axes.scatter(positions[:, 0], positions[:, 1], .1, color='k')
 
