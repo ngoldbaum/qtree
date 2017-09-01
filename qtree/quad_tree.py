@@ -112,7 +112,17 @@ class ParticleQuadTreeNode(object):
     @property
     def children(self):
         for d in _Direction:
-            yield getattr(self, d.name.lower())
+            child = getattr(self, d.name.lower())
+            if child is not None:
+                yield child
+
+    @property
+    def leaves(self):
+        if self.positions is not None:
+            yield self
+        for child in self.children:
+            for leaf in child.leaves:
+                yield leaf
 
     def plot(self, fig=None, axes=None):
         """Plot this quadtree node and its subtree"""
@@ -133,7 +143,5 @@ class ParticleQuadTreeNode(object):
             axes.scatter(positions[:, 0], positions[:, 1], 1, color='k')
 
         for child in self.children:
-            if child is None:
-                continue
             child.plot(fig, axes)
         plt.show()
