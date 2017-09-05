@@ -1,1 +1,1 @@
-from qtree.quad_tree import ParticleQuadTreeNode
+from qtree.quad_tree import ParticleQuadTreeNode  # NOQA
