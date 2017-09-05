@@ -157,7 +157,7 @@ class ParticleQuadTreeNode(object):
         for child in self.children:
             child._plot_subtree(fig, axes)
 
-    def plot(self, fig=None, axes=None):
+    def plot(self, filename=None, fig=None, axes=None):
         """Plot this quadtree node and its subtree"""
         fig = plt.figure(figsize=(4, 4))
         axes = fig.add_axes([.01, .01, .98, .98])
@@ -166,4 +166,7 @@ class ParticleQuadTreeNode(object):
         plt.xlim((0, 1))
         plt.ylim((0, 1))
         self._plot_subtree(fig, axes)
-        plt.show()
+        if filename is None:
+            plt.show()
+        else:
+            plt.savefig(filename)
