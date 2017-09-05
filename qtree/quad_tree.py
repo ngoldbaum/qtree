@@ -1,4 +1,8 @@
-import enum
+try:
+    import enum
+except ImportError:
+    # need enum34 on python2.7
+    import enum34 as enum
 
 import numpy as np
 from matplotlib import pyplot as plt
