@@ -26,7 +26,7 @@ _offsets = {
 class ParticleQuadTreeNode(object):
     __slots__ = ('positions', 'num_particles', 'center', 'half_width',
                  'northeast', 'northwest', 'southeast', 'southwest',
-                 '_left_edge', '_right_edge')
+                 'deposit_field', '_left_edge', '_right_edge')
 
     def __init__(self, center, half_width):
         """A QuadTree data structure containing particles
@@ -40,6 +40,7 @@ class ParticleQuadTreeNode(object):
             supported.
         """
         self.positions = np.empty((_NODE_CAPACITY, 2))
+        self.deposit_field = np.empty(_NODE_CAPACITY)
         self.positions[:] = np.nan
         self.num_particles = 0
 
@@ -60,19 +61,27 @@ class ParticleQuadTreeNode(object):
         self._left_edge = None
         self._right_edge = None
 
-    def insert(self, positions):
+    def insert(self, positions, deposit_field=None):
         """Insert particle into the quadtree
 
         Parameters
         ----------
         position : 2 element iterable or iterable of 2-element iterables
             Position of the particle to be inserted.
+        deposit_field : iterable, optional
+            Field to be deposited and pixelized. Must have the same number of
+            elements as the number of positions.
         """
         positions = np.asarray(positions)
         if len(positions.shape) == 1:
             positions = np.asarray([positions])
 
         nparticles = positions.shape[0]
+
+        if deposit_field is not None and nparticles != deposit_field.shape[0]:
+            raise RuntimeError(
+                "Received %s deposit_field entries but received %s particle "
+                "positions" % (deposit_field.shape[0], nparticles))
 
         if positions.shape[-1] != 2:
             raise RuntimeError(
@@ -91,20 +100,30 @@ class ParticleQuadTreeNode(object):
 
         if self.num_particles <= _NODE_CAPACITY:
             self.positions[cur_np: cur_np + nparticles] = positions
+            if deposit_field is not None:
+                self.deposit_field[cur_np: cur_np + nparticles] = deposit_field
             return
 
         if self.is_leaf:
             positions = np.vstack((self.positions[:cur_np], positions))
+            if deposit_field is not None:
+                deposit_field = np.concatenate(
+                    (self.deposit_field[:cur_np], deposit_field))
             self.positions = None
+            self.deposit_field = None
 
         # adding another particle requires refining the tree
         center = self.center
         for direction in _Direction:
             pos_gt_cen = (positions > center).astype(int)
             inds = (pos_gt_cen == direction.value).all(axis=-1).nonzero()[0]
-            self._insert_child(direction, positions[inds])
+            if deposit_field is not None:
+                dep_field = deposit_field[inds]
+            else:
+                dep_field = None
+            self._insert_child(direction, positions[inds], dep_field)
 
-    def _insert_child(self, direction, positions):
+    def _insert_child(self, direction, positions, deposit_field):
         child_name = direction.name.lower()
         child_node = getattr(self, child_name)
         if child_node is None:
@@ -112,7 +131,7 @@ class ParticleQuadTreeNode(object):
             child_node = ParticleQuadTreeNode(
                 self.center + self.half_width / 2 * offset, self.half_width/2)
             setattr(self, child_name, child_node)
-        child_node.insert(positions)
+        child_node.insert(positions, deposit_field)
 
     @property
     def children(self):
