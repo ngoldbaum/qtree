@@ -153,6 +153,10 @@ class ParticleQuadTreeNode(object):
                 yield leaf
 
     @property
+    def area(self):
+        return (self.right_edge - self.left_edge).prod()
+
+    @property
     def left_edge(self):
         if self._left_edge is None:
             self._left_edge = self.center - self.half_width
