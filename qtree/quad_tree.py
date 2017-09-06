@@ -133,7 +133,7 @@ class ParticleQuadTreeNode(object):
         if child_node is None:
             offset = _offsets[direction]
             child_node = ParticleQuadTreeNode(
-                self.center + self.half_width / 2 * offset, self.half_width/2)
+                self.center + self.half_width/2 * offset, self.half_width/2)
             setattr(self, child_name, child_node)
         child_node.insert(positions, deposit_field)
 
