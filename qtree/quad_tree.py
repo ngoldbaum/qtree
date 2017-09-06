@@ -66,12 +66,12 @@ class ParticleQuadTreeNode(object):
         self._right_edge = None
 
     def insert(self, positions, deposit_field=None):
-        """Insert particle into the quadtree
+        """Insert particles into the quadtree
 
         Parameters
         ----------
-        position : 2 element iterable or iterable of 2-element iterables
-            Position of the particle to be inserted.
+        positions : 2 element iterable or iterable of 2-element iterables
+            Positions of the particles to be inserted.
         deposit_field : iterable, optional
             Field to be deposited and pixelized. Must have the same number of
             elements as the number of positions.
