@@ -65,6 +65,37 @@ class ParticleQuadTreeNode(object):
         self._left_edge = None
         self._right_edge = None
 
+    def pixelize(self, image):
+        """pixelize the deposit_field onto an image
+
+        Parameters
+        ----------
+        image : 2D array
+            Image to pixelize onto
+        """
+        image = np.asarray(image)
+
+        if len(image.shape) != 2:
+            raise RuntimeError("Must pixelize onto 2D image")
+
+        bounds = np.array([self.left_edge, self.right_edge])
+
+        for leaf in self.leaves:
+            leaf._pixelize_subtree(image, bounds)
+
+    def _pixelize_subtree(self, image, bounds):
+        dd = (bounds[1] - bounds[0])/np.array(image.shape)
+
+        i0 = int((self.left_edge[0] - bounds[0][0])/dd[0])
+        j0 = int((self.left_edge[1] - bounds[0][1])/dd[1])
+
+        i1 = int((self.right_edge[0] - bounds[0][0])/dd[0])
+        j1 = int((self.right_edge[1] - bounds[0][1])/dd[1])
+
+        deposit = self.deposit_field[:self.num_particles].sum() / self.area
+
+        image[i0:i1, j0:j1] += deposit
+
     def insert(self, positions, deposit_field=None):
         """Insert particles into the quadtree
 
@@ -179,7 +210,8 @@ class ParticleQuadTreeNode(object):
 
         if self.is_leaf:
             positions = self.positions[:self.num_particles]
-            axes.scatter(positions[:, 0], positions[:, 1], .1, color='k')
+            axes.scatter(positions[:, 0], positions[:, 1], s=.2, color='k',
+                         marker='o')
 
         for child in self.children:
             child._plot_subtree(fig, axes)
@@ -196,4 +228,4 @@ class ParticleQuadTreeNode(object):
         if filename is None:
             plt.show()
         else:
-            plt.savefig(filename)
+            plt.savefig(filename, dpi=400)
