@@ -1,4 +1,12 @@
 from setuptools import setup, find_packages
+from setuptools.extension import Extension
+from Cython.Build import cythonize
+import numpy as np
+
+extensions = [
+    Extension("qtree.utils", ["qtree/utils.pyx"],
+              include_dirs=[np.get_include()])
+]
 
 setup(
     name='qtree',
@@ -25,5 +33,6 @@ setup(
     ],
     keywords="quadtree particle",
     packages=find_packages(),
+    ext_modules=cythonize(extensions),
     install_requires=[],
 )

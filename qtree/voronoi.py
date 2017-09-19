@@ -3,6 +3,8 @@ from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 from scipy.spatial import Voronoi
 
+from qtree.utils import _points_in_poly
+
 
 class ParticleVoronoiMesh(object):
 
@@ -41,6 +43,49 @@ class ParticleVoronoiMesh(object):
         ridge_verts = np.array(voro.ridge_vertices)
         ridge_verts = ridge_verts[(ridge_verts != -1).all(axis=-1)]
         self.segments = voro.vertices[ridge_verts]
+
+    def pixelize(self, image):
+        """pixelize the deposit_field onto an image
+
+        Parameters
+        ----------
+        image : 2D array
+            Image to pixelize onto
+        """
+        image = np.asarray(image)
+
+        if len(image.shape) != 2:
+            raise RuntimeError("Must pixelize onto 2D image")
+
+        voro = self.voro
+        regions = voro.regions
+        bounds = self.bounds
+
+        dx = 1/image.shape[0]
+        dy = 1/image.shape[1]
+
+        xb = bounds[1, 0] - bounds[0, 0] - dx
+        yb = bounds[1, 1] - bounds[0, 1] - dy
+
+        xlin = np.arange(image.shape[0])/(image.shape[0] - 1) * xb + dx/2
+        ylin = np.arange(image.shape[1])/(image.shape[1] - 1) * yb + dy/2
+
+        x, y = np.meshgrid(xlin, ylin)
+
+        for i, point_coord in enumerate(voro.points):
+            region_idx = voro.point_region[i]
+            region = regions[region_idx]
+            if -1 in region or len(region) == 0:
+                continue
+            vertices = voro.vertices[region]
+            vx = vertices[:, 0]
+            vy = vertices[:, 1]
+            area = 0.5*np.abs(np.dot(vx, np.roll(vy, 1)) -
+                              np.dot(vy, np.roll(vx, 1)))
+            in_poly = _points_in_poly(vertices, x, y)
+            image[np.where(in_poly)] = self.deposit_field[i] / area
+
+        return image
 
     def plot(self, filename=None):
         """Plot the mesh"""
