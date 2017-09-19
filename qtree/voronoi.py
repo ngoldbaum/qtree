@@ -4,89 +4,6 @@ from matplotlib.collections import LineCollection
 from scipy.spatial import Voronoi
 
 
-def _additional_segments(segments, bounds):
-    ret = []
-    for ib, b in enumerate(bounds):
-        for i in range(2):
-            wh, rows = np.where(segments[:, :, i] == b[i])
-            points = [segment[row] for segment, row in zip(segments[wh], rows)]
-            points = np.asarray(points)
-            inc_axis = (i + 1) % 2
-            lb = b
-            ub = [b[i], bounds[(ib + 1) % 2][(i + 1) % 2]]
-            if inc_axis == 0:
-                ub.reverse()
-            points = np.concatenate([[lb], points, [ub]])
-            npoints = points[np.argsort(points[:, inc_axis])]
-            npoints = points.shape[0]
-            lo = points[range(npoints-1), None]
-            hi = points[range(1, npoints), None]
-            segs = np.concatenate([lo, hi], axis=1)
-            ret.append(segs)
-    return np.concatenate(ret)
-
-
-def _clip_edges(verts, bounds):
-    for i, vert in enumerate(verts):
-        if ((vert[0] < bounds[0][0] or vert[1] < bounds[0][1] or
-             vert[0] >= bounds[1][0] or vert[1] >= bounds[1][1])):
-            overt = verts[(i + 1) % 2]
-            for b1, b2 in _boundary_segments(bounds):
-                intersect = _find_intersection(vert, overt, b1, b2)
-                if intersect is not None:
-                    verts[i] = intersect
-                    return np.asarray(verts)
-            return None
-    return np.asarray(verts)
-
-
-def _a(obj):
-    return np.asarray(obj)
-
-
-def _boundary_segments(bounds):
-    yield bounds[0], _a([bounds[1, 0], bounds[0, 1]])
-    yield bounds[0], _a([bounds[0, 0], bounds[1, 1]])
-    yield _a([bounds[0, 0], bounds[1, 1]]), bounds[1]
-    yield _a([bounds[1, 0], bounds[0, 1]]), bounds[1]
-
-
-def _find_intersection(p0, p1, p2, p3):
-    # see https://stackoverflow.com/questions/563198
-
-    s10_x = p1[0] - p0[0]
-    s10_y = p1[1] - p0[1]
-    s32_x = p3[0] - p2[0]
-    s32_y = p3[1] - p2[1]
-
-    denom = s10_x * s32_y - s32_x * s10_y
-
-    if denom == 0:
-        # collinear
-        return None
-
-    s02_x = p0[0] - p2[0]
-    s02_y = p0[1] - p2[1]
-
-    s_numer = s10_x * s02_y - s10_y * s02_x
-    t_numer = s32_x * s02_y - s32_y * s02_x
-
-    posd = denom > 0
-
-    if ((posd == (s_numer < 0) or
-         posd == (t_numer < 0) or
-         posd == (s_numer > denom) or
-         posd == (t_numer > denom))):
-        # no collision
-        return None
-
-    # collision detected
-
-    t = t_numer / denom
-    intersection_point = [p0[0] + (t * s10_x), p0[1] + (t * s10_y)]
-    return np.asarray(intersection_point)
-
-
 class ParticleVoronoiMesh(object):
 
     def __init__(self, positions, deposit_field, bounds):
@@ -121,30 +38,9 @@ class ParticleVoronoiMesh(object):
         self.voro = voro = Voronoi(positions)
         self.deposit_field = deposit_field
 
-        segments = []
-        box_width = bounds[1] - bounds[0]
-        center = box_width/2
-        for pointidx, simplex in zip(voro.ridge_points, voro.ridge_vertices):
-            simplex = np.asarray(simplex)
-            if np.all(simplex >= 0):
-                segment = _clip_edges(voro.vertices[simplex], bounds)
-                if segment is not None:
-                    segments.append(segment)
-                continue
-            i = simplex[simplex >= 0][0]  # finite end Voronoi vertex index
-            t = voro.points[pointidx[1]] - voro.points[pointidx[0]]  # tangent
-            t /= np.linalg.norm(t)
-            n = np.array([-t[1], t[0]])  # normal
-            midpoint = voro.points[pointidx].mean(axis=0)
-            direction = np.sign(np.dot(midpoint - center, n)) * n
-            far_point = voro.vertices[i] + direction * box_width
-            segment = _clip_edges([voro.vertices[i], far_point], bounds)
-            if segment is not None:
-                segments.append(segment)
-        segments = np.asarray(segments)
-        edge_segments = _additional_segments(segments, bounds)
-        segments = np.concatenate([segments, edge_segments])
-        self.segments = segments
+        ridge_verts = np.array(voro.ridge_vertices)
+        ridge_verts = ridge_verts[(ridge_verts != -1).all(axis=-1)]
+        self.segments = voro.vertices[ridge_verts]
 
     def plot(self, filename=None):
         """Plot the mesh"""
